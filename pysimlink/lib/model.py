@@ -52,7 +52,6 @@ class Model:
             skip_compile (bool): skip compilation of the model. This is useful if you have already compiled the model and just want to import it.
             generator (str): Type of generator to use for cmake. defaults to :code:`NMake Makefiles` on windows and :code:`Unix Makefiles` on mac/linux.
 
-
         Attributes:
             orientations: enumeration describing matrix orientations (row major, column major, etc.). This enumeration is
                 likely the same among all models, but could change across MATLAB versions.
@@ -307,3 +306,24 @@ class Model:
         value = cast_type(value, dtype, self.orientations)
 
         self._model.set_model_param(model_name, param, value)
+
+    def set_input(self, signal: str, value: int, model: str):
+        """
+        Set input signal to value
+
+        Args:
+            signal: name of the input to modify
+            value: value of the input
+            model: name of the model in which the input resides
+        """
+        self._model.set_input(model, signal, value)
+
+    def get_output(self, signal: str, model: str):
+        """
+        Get the value of an output
+
+        Args:
+            signal: name of the output signal
+            model: nameo of the model from which to get the output
+        """
+        return self._model.get_output(model, signal)

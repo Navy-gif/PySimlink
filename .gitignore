@@ -17,3 +17,6 @@ tests
 docs/_build
 dev_files/
 *.txt
+
+.venv
+deps/

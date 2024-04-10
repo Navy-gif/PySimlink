@@ -1,5 +1,6 @@
 #include "model_interface.hpp"
 #include <cstdio>
+// #include <iostream>
 
 #ifdef _WIN32
 #define NULL_FILE "NUL"
@@ -11,13 +12,16 @@ using namespace PYSIMLINK;
 
 namespace py = pybind11;
 
-Model::~Model(){
-    if(initialized){
+Model::~Model()
+{
+    if (initialized)
+    {
         terminate();
     }
 }
 
-Model::Model(std::string name){
+Model::Model(std::string name)
+{
     initialized = false;
     memset(OverrunFlags, 0, sizeof(boolean_T));
     memset(eventFlags, 0, sizeof(boolean_T));
@@ -25,14 +29,16 @@ Model::Model(std::string name){
     mdl_name = name;
 }
 
-void Model::terminate(){
+void Model::terminate()
+{
 #ifdef rtmGetRTWLogInfo
-    rt_StopDataLogging(NULL_FILE,rtmGetRTWLogInfo(RT_MDL));
+    rt_StopDataLogging(NULL_FILE, rtmGetRTWLogInfo(RT_MDL));
 #endif
     MODEL_TERMINATE();
 }
 
-void Model::reset(){
+void Model::reset()
+{
     // clear all model mapping information bc it may change
     // between runs (verify this)
     model_param.clear();
@@ -40,7 +46,8 @@ void Model::reset(){
     block_map.clear();
 
     // clear loggind data
-    if(initialized){
+    if (initialized)
+    {
         terminate();
     }
     MODEL_INITIALIZE();
@@ -53,21 +60,26 @@ void Model::reset(){
     initialized = true;
 }
 
-double Model::step_size() {
-    if(!initialized){
+double Model::step_size()
+{
+    if (!initialized)
+    {
         throw std::runtime_error("Model must be initialized before calling step_size. Call `reset()` first!");
     }
     return RT_MDL->Timing.stepSize0;
 }
 
-std::vector<struct ModelInfo> Model::get_params() const{
-    if(!initialized){
+std::vector<struct ModelInfo> Model::get_params() const
+{
+    if (!initialized)
+    {
         throw std::runtime_error("Model must be initialized before calling print_params. Call `reset()` first!");
     }
     std::vector<struct ModelInfo> ret;
     ret.reserve(mmi_map.size());
 
-    for(auto it : mmi_map){
+    for (auto it : mmi_map)
+    {
         struct ModelInfo to_add;
         to_add.model_name = it.first;
         to_add.block_params = debug_block_param(it.second);
@@ -78,25 +90,31 @@ std::vector<struct ModelInfo> Model::get_params() const{
     return ret;
 }
 
-void Model::discover_mmis(const rtwCAPI_ModelMappingInfo *mmi){
+void Model::discover_mmis(const rtwCAPI_ModelMappingInfo *mmi)
+{
     // go through all child mmis and insert them into the map.
-    for(size_t i = 0; i < mmi->InstanceMap.childMMIArrayLen; i++){
+    for (size_t i = 0; i < mmi->InstanceMap.childMMIArrayLen; i++)
+    {
         mmi_map.insert(std::make_pair(std::string(mmi->InstanceMap.childMMIArray[i]->InstanceMap.path), mmi->InstanceMap.childMMIArray[i]));
         discover_mmis(mmi->InstanceMap.childMMIArray[i]);
     }
 }
 
-void Model::step(int num_steps){
-    assert(((void)"num_steps must be a positive number", num_steps>0));
-    if(!initialized){
+void Model::step(int num_steps)
+{
+    assert(((void)"num_steps must be a positive number", num_steps > 0));
+    if (!initialized)
+    {
         throw std::runtime_error("Model must be initialized before calling step. Call `reset()` first!");
     }
 
-    for(int cur_step=0; cur_step < num_steps; cur_step++){
+    for (int cur_step = 0; cur_step < num_steps; cur_step++)
+    {
         if (OverrunFlags[0]++)
             rtmSetErrorStatus(RT_MDL, "Overrun");
 
-        if (rtmGetErrorStatus(RT_MDL) != NULL) {
+        if (rtmGetErrorStatus(RT_MDL) != NULL)
+        {
             char buf[256];
             sprintf(buf, "Model is in errored state: %s", rtmGetErrorStatus(RT_MDL));
             throw std::runtime_error(buf);
@@ -108,8 +126,10 @@ void Model::step(int num_steps){
     }
 }
 
-double Model::tFinal() {
-    if(!initialized){
+double Model::tFinal()
+{
+    if (!initialized)
+    {
         throw std::runtime_error("Model must be initialized before calling tFinal. Call `reset()` first!");
     }
 #ifndef rtmGetFinalTime
@@ -119,8 +139,10 @@ double Model::tFinal() {
 #endif
 }
 
-void Model::set_tFinal(float tFinal){
-    if(!initialized){
+void Model::set_tFinal(float tFinal)
+{
+    if (!initialized)
+    {
         throw std::runtime_error("Model must be initialized before calling set_tFinal. Call `reset()` first!");
     }
 
@@ -131,14 +153,17 @@ void Model::set_tFinal(float tFinal){
 #endif
 }
 
-std::vector<std::string> Model::get_models() const{
-    if(!initialized){
+std::vector<std::string> Model::get_models() const
+{
+    if (!initialized)
+    {
         throw std::runtime_error("Model must be initialized before calling get_models. Call `reset()` first!");
     }
     std::vector<std::string> ret;
     ret.reserve(mmi_map.size());
 
-    for(auto i : mmi_map){
+    for (auto i : mmi_map)
+    {
         ret.push_back(i.first);
     }
 
@@ -146,65 +171,73 @@ std::vector<std::string> Model::get_models() const{
 }
 
 PYSIMLINK::DataType Model::signal_info(const std::string &model, const std::string &block_path,
-                                       const std::string &signal) {
-    if(!initialized){
+                                       const std::string &signal)
+{
+    if (!initialized)
+    {
         throw std::runtime_error("Model must be initialized before calling get_sig. Call `reset()` first!");
     }
 
-    if(block_path.empty())
+    if (block_path.empty())
         throw std::runtime_error("No path provided to get_sig!");
-    if(model.empty())
+    if (model.empty())
         throw std::runtime_error("No model name provided to get_sig!");
 
     auto mmi_idx = mmi_map.find(model);
-    if(mmi_idx == mmi_map.end()){
+    if (mmi_idx == mmi_map.end())
+    {
         char buf[256];
         sprintf(buf, "Cannot find model with name: %s", model.c_str());
         throw std::runtime_error(buf);
     }
 
-    const char* sig_name = signal.empty() ? nullptr : signal.c_str();
+    const char *sig_name = signal.empty() ? nullptr : signal.c_str();
     return PYSIMLINK::describe_signal(mmi_idx->second, block_path.c_str(), sig_name, sig_map);
 }
 
-py::array Model::get_sig(const std::string& model, const std::string& block_path, const std::string& sig_name_raw){
-    if(!initialized){
+py::array Model::get_sig(const std::string &model, const std::string &block_path, const std::string &sig_name_raw)
+{
+    if (!initialized)
+    {
         throw std::runtime_error("Model must be initialized before calling get_sig. Call `reset()` first!");
     }
 
-    if(block_path.empty())
+    if (block_path.empty())
         throw std::runtime_error("No path provided to get_sig!");
-    if(model.empty())
+    if (model.empty())
         throw std::runtime_error("No model name provided to get_sig!");
 
     auto mmi_idx = mmi_map.find(model);
-    if(mmi_idx == mmi_map.end()){
+    if (mmi_idx == mmi_map.end())
+    {
         char buf[256];
         sprintf(buf, "Cannot find model with name: %s", model.c_str());
         throw std::runtime_error(buf);
     }
 
-
-    const char* sig_name = sig_name_raw.empty() ? nullptr : sig_name_raw.c_str();
+    const char *sig_name = sig_name_raw.empty() ? nullptr : sig_name_raw.c_str();
     auto ret = PYSIMLINK::get_signal_val(mmi_idx->second, sig_map, block_path.c_str(), sig_name);
-//    py::handle<PYSIMLINK::signal_info> tmp(ret);
+    //    py::handle<PYSIMLINK::signal_info> tmp(ret);
     return py::array(PYSIMLINK::from_buffer_struct(ret->data.arr));
 }
 
-py::array Model::get_block_param(const std::string& model, const std::string& block_path, const std::string& param){
-    if(!initialized){
+py::array Model::get_block_param(const std::string &model, const std::string &block_path, const std::string &param)
+{
+    if (!initialized)
+    {
         throw std::runtime_error("Model must be initialized before calling get_block_param. Call `reset()` first!");
     }
 
-    if(block_path.empty())
+    if (block_path.empty())
         throw std::runtime_error("No path provided to get_block_param!");
-    if(model.empty())
+    if (model.empty())
         throw std::runtime_error("No model name provided to get_block_param!");
-    if(param.empty())
+    if (param.empty())
         throw std::runtime_error("No parameter provided to get_block_param!");
 
     auto mmi_idx = mmi_map.find(model);
-    if(mmi_idx == mmi_map.end()){
+    if (mmi_idx == mmi_map.end())
+    {
         char buf[256];
         sprintf(buf, "Cannot find model with name: %s", model.c_str());
         throw std::runtime_error(buf);
@@ -213,18 +246,81 @@ py::array Model::get_block_param(const std::string& model, const std::string& bl
     return py::array(ret);
 }
 
-struct PYSIMLINK::DataType Model::block_param_info(const std::string &model, const std::string& block_path, const std::string& param){
-    if(!initialized){
+void PYSIMLINK::Model::set_input(const std::string &model, const std::string &signal, int value)
+{
+    if (!initialized)
+        throw std::runtime_error("Model must be initialised before calling set_input. Call reset() first!");
+    if (model.empty())
+        throw std::runtime_error("No model name provided");
+    if (signal.empty())
+        throw std::runtime_error("No signal name provided");
+    auto mmi_idx = mmi_map.find(model);
+    if (mmi_idx == mmi_map.end())
+        throw std::runtime_error("Cannot find model by that name");
+
+    auto mmi = mmi_idx->second;
+    auto inputs = rtwCAPI_GetRootInputs(mmi);
+    auto length = rtwCAPI_GetNumRootInputs(mmi);
+    if (!length)
+        throw std::runtime_error("This model does not have any root inputs");
+
+    for (uint_T idx = 0; idx < length; idx++)
+    {
+        auto input = inputs[idx];
+        if (strcmp(input.signalName, signal.c_str()) == 0)
+        {
+            auto inputValue = static_cast<real_T *>(mmi->InstanceMap.dataAddrMap[input.addrMapIndex]);
+            *inputValue = value;
+        }
+    }
+}
+
+py::float_ PYSIMLINK::Model::get_output(const std::string &model, const std::string &signal)
+{
+    if (!initialized)
+        throw std::runtime_error("Model must be initialised before calling set_input. Call reset() first!");
+    if (model.empty())
+        throw std::runtime_error("No model name provided");
+    if (signal.empty())
+        throw std::runtime_error("No signal name provided");
+    auto mmi_idx = mmi_map.find(model);
+    if (mmi_idx == mmi_map.end())
+        throw std::runtime_error("Cannot find model by that name");
+
+    auto mmi = mmi_idx->second;
+    auto outputs = rtwCAPI_GetRootOutputs(mmi);
+    auto length = rtwCAPI_GetNumRootOutputs(mmi);
+    if (!length)
+        throw std::runtime_error("This model does not have any root outputs");
+    
+    for(uint_T idx = 0; idx < length; idx++)
+    {
+        auto output = outputs[idx];
+        // std::cout << "Testing signal " << output.signalName << "[" << output.addrMapIndex << "]" << " against " << signal << "\n";
+        if(strcmp(output.signalName, signal.c_str()) == 0)
+        {
+            auto outputValue = static_cast<real_T*>(mmi->InstanceMap.dataAddrMap[output.addrMapIndex]);
+            return py::float_(*outputValue);
+        }
+    }
+    throw std::runtime_error("Could not find the given root output");
+}
+
+struct PYSIMLINK::DataType Model::block_param_info(const std::string &model, const std::string &block_path, const std::string &param)
+{
+    if (!initialized)
+    {
         throw std::runtime_error("Model must be initialized before calling get_block_param. Call `reset()` first!");
     }
-    if(block_path.empty())
+    if (block_path.empty())
         throw std::runtime_error("No path provided to get_block_param!");
-    if(model.empty())
+    if (model.empty())
         throw std::runtime_error("No model name provided to get_block_param!");
-    if(param.empty())
+    if (param.empty())
         throw std::runtime_error("No parameter provided to get_block_param!");
     auto mmi_idx = mmi_map.find(model);
-    if(mmi_idx == mmi_map.end()){
+    if (mmi_idx == mmi_map.end())
+    {
         char buf[256];
         sprintf(buf, "Cannot find model with name: %s", model.c_str());
         throw std::runtime_error(buf);
@@ -232,18 +328,21 @@ struct PYSIMLINK::DataType Model::block_param_info(const std::string &model, con
     return PYSIMLINK::describe_block_param(mmi_idx->second, block_path.c_str(), param.c_str());
 }
 
-py::array Model::get_model_param(const std::string &model, const std::string &param) {
-    if(!initialized){
+py::array Model::get_model_param(const std::string &model, const std::string &param)
+{
+    if (!initialized)
+    {
         throw std::runtime_error("Model must be initialized before calling get_block_param. Call `reset()` first!");
     }
 
-    if(model.empty())
+    if (model.empty())
         throw std::runtime_error("No model name provided to get_model_param!");
-    if(param.empty())
+    if (param.empty())
         throw std::runtime_error("No parameter provided to get_model_param!");
 
     auto mmi_idx = mmi_map.find(model);
-    if(mmi_idx == mmi_map.end()){
+    if (mmi_idx == mmi_map.end())
+    {
         char buf[256];
         sprintf(buf, "Cannot find model with name: %s", model.c_str());
         throw std::runtime_error(buf);
@@ -252,17 +351,20 @@ py::array Model::get_model_param(const std::string &model, const std::string &pa
     return py::array(ret);
 }
 
-struct PYSIMLINK::DataType Model::model_param_info(const std::string &model, const std::string &param) {
-    if(!initialized){
+struct PYSIMLINK::DataType Model::model_param_info(const std::string &model, const std::string &param)
+{
+    if (!initialized)
+    {
         throw std::runtime_error("Model must be initialized before calling get_block_param. Call `reset()` first!");
     }
 
-    if(model.empty())
+    if (model.empty())
         throw std::runtime_error("No model name provided to get_model_param!");
-    if(param.empty())
+    if (param.empty())
         throw std::runtime_error("No parameter provided to get_model_param!");
     auto mmi_idx = mmi_map.find(model);
-    if(mmi_idx == mmi_map.end()){
+    if (mmi_idx == mmi_map.end())
+    {
         char buf[256];
         sprintf(buf, "Cannot find model with name: %s", model.c_str());
         throw std::runtime_error(buf);
@@ -271,26 +373,28 @@ struct PYSIMLINK::DataType Model::model_param_info(const std::string &model, con
 }
 
 all_dtypes PYSIMLINK::Model::get_sig_union(const std::string &model, const std::string &block_path,
-                                     const std::string &sig_name_raw) {
+                                           const std::string &sig_name_raw)
+{
     all_dtypes ret;
-    if(!initialized){
+    if (!initialized)
+    {
         throw std::runtime_error("Model must be initialized before calling get_sig. Call `reset()` first!");
     }
 
-    if(block_path.empty())
+    if (block_path.empty())
         throw std::runtime_error("No path provided to get_sig!");
-    if(model.empty())
+    if (model.empty())
         throw std::runtime_error("No model name provided to get_sig!");
 
     auto mmi_idx = mmi_map.find(model);
-    if(mmi_idx == mmi_map.end()){
+    if (mmi_idx == mmi_map.end())
+    {
         char buf[256];
         sprintf(buf, "Cannot find model with name: %s", model.c_str());
         throw std::runtime_error(buf);
     }
 
-
-    const char* sig_name = sig_name_raw.empty() ? nullptr : sig_name_raw.c_str();
+    const char *sig_name = sig_name_raw.empty() ? nullptr : sig_name_raw.c_str();
     auto sig_info = PYSIMLINK::get_signal_val(mmi_idx->second, sig_map, block_path.c_str(), sig_name);
     (void)memcpy(&ret, sig_info->data.addr, sig_info->type_size);
     return ret;
