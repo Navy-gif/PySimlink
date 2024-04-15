@@ -30,6 +30,8 @@ extern "C"
 #define CONCAT(name1, name2) EXPAND_CONCAT(name1, name2)
 #define MODEL_INITIALIZE CONCAT(MODEL, _initialize)
 #define MODEL_STEP CONCAT(MODEL, _step)
+#define MODEL_OUTPUT CONCAT(MODEL, _output)
+#define MODEL_UPDATE CONCAT(MODEL, _update)
 #define MODEL_TERMINATE CONCAT(MODEL, _terminate)
 #define RT_MDL CONCAT(MODEL, _M)
 
@@ -43,8 +45,12 @@ namespace PYSIMLINK
         Model(std::string name);
         ~Model();
 
-        void step(int num_steps);
         void reset();
+        void step(int num_steps);
+        #ifndef SINGLEOUTPUT
+        void output();
+        void update();
+        #endif
 
         std::vector<struct ModelInfo> get_params() const;
         py::array get_sig(const std::string &model, const std::string &path, const std::string &sig_name);
@@ -58,7 +64,7 @@ namespace PYSIMLINK
         template <typename T>
         void set_model_param(const std::string &model, const std::string &param, py::array_t<T> value);
         
-        void set_input(const std::string &model, const std::string &signal, int value);
+        void set_input(const std::string &model, const std::string &signal, double value);
         py::float_ get_output(const std::string &model, const std::string &signal);
 
         struct PYSIMLINK::DataType block_param_info(const std::string &model, const std::string &block_path, const std::string &param);

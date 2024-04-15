@@ -31,6 +31,10 @@ PYBIND11_MODULE(<<MODEL_INTERFACE_C>>, m)
             .def("tFinal", &PYSIMLINK::Model::tFinal)
             .def("set_tFinal", &PYSIMLINK::Model::set_tFinal)
             .def("step", &PYSIMLINK::Model::step)
+            #ifndef SINGLEOUTPUT
+            .def("output", &PYSIMLINK::Model::output)
+            .def("update", &PYSIMLINK::Model::update)
+            #endif
             .def("get_models", &PYSIMLINK::Model::get_models)
             .def("get_signal_arr", &PYSIMLINK::Model::get_sig)
             .def("get_signal_union", &PYSIMLINK::Model::get_sig_union)

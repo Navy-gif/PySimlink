@@ -120,11 +120,53 @@ void Model::step(int num_steps)
             throw std::runtime_error(buf);
         }
 
+#ifdef SINGLEOUTPUT
         MODEL_STEP();
-
+#else
+        MODEL_OUTPUT();
+        MODEL_UPDATE();
+#endif
         OverrunFlags[0]--;
     }
 }
+
+#ifndef SINGLEOUTPUT
+void Model::output()
+{
+    if(!initialized)
+        throw std::runtime_error("Model must be initialized before calling step. Call reset() first!");
+
+    if (OverrunFlags[0]++)
+        rtmSetErrorStatus(RT_MDL, "Overrun");
+
+    if (rtmGetErrorStatus(RT_MDL) != NULL)
+    {
+        char buf[256];
+        sprintf(buf, "Model is in errored state: %s", rtmGetErrorStatus(RT_MDL));
+        throw std::runtime_error(buf);
+    }
+    MODEL_OUTPUT();
+    OverrunFlags[0]--;
+}
+
+void Model::update()
+{
+    if(!initialized)
+        throw std::runtime_error("Model must be initialized before calling step. Call reset() first!");
+
+    if (OverrunFlags[0]++)
+        rtmSetErrorStatus(RT_MDL, "Overrun");
+
+    if (rtmGetErrorStatus(RT_MDL) != NULL)
+    {
+        char buf[256];
+        sprintf(buf, "Model is in errored state: %s", rtmGetErrorStatus(RT_MDL));
+        throw std::runtime_error(buf);
+    }
+    MODEL_UPDATE();
+    OverrunFlags[0]--;
+}
+#endif
 
 double Model::tFinal()
 {
@@ -246,7 +288,7 @@ py::array Model::get_block_param(const std::string &model, const std::string &bl
     return py::array(ret);
 }
 
-void PYSIMLINK::Model::set_input(const std::string &model, const std::string &signal, int value)
+void PYSIMLINK::Model::set_input(const std::string &model, const std::string &signal, double value)
 {
     if (!initialized)
         throw std::runtime_error("Model must be initialised before calling set_input. Call reset() first!");

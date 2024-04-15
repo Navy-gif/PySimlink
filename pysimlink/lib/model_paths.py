@@ -150,21 +150,23 @@ class ModelPaths:
         )
 
         ## also check that this is not a multitasked model
-        with open(
-            os.path.join(self.root_model_path, self.root_model_name + ".h"), encoding="utf-8"
-        ) as f:
-            lines = f.readlines()
+        ## NOTE/TODO: check if multitasked models are something to avoid or not
+        # with open(
+        #     os.path.join(self.root_model_path, self.root_model_name + ".h"), encoding="utf-8"
+        # ) as f:
+        #     lines = f.readlines()
 
-        regex = re.compile(
-            f"extern void {self.root_model_name}_step\(void\);"  # pylint: disable=W1401
-        )
-        for line in lines:
-            if re.search(regex, line):
-                break
-        else:
-            raise RuntimeError(
-                "Model is setup with multitasking OR single output/update function is not enabled. See the docs for proper generation format (https://lharri73.github.io/PySimlink/src/howto.html#generate-code-from-your-simulink-model)"
-            )
+        ## Unecessary check, given that the interface can be compiled without single output/update
+        # regex = re.compile(
+        #     f"extern void {self.root_model_name}_step\(void\);"  # pylint: disable=W1401
+        # )
+        # for line in lines:
+        #     if re.search(regex, line):
+        #         break
+        # else:
+        #     raise RuntimeError(
+        #         "Model is setup with multitasking OR single output/update function is not enabled. See the docs for proper generation format (https://lharri73.github.io/PySimlink/src/howto.html#generate-code-from-your-simulink-model)"
+        #     )
 
     def compiler_factory(self, generator) -> "anno.Compiler":
         """

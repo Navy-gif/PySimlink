@@ -163,6 +163,24 @@ class Model:
         """
         self._model.step(iterations)
 
+    def output(self):
+        """
+        Update the outputs of the model
+
+        Raises:
+            RuntimeError
+        """
+        self._model.output()
+
+    def update(self):
+        """
+        Update the outputs of the model
+
+        Raises:
+            RuntimeError
+        """
+        self._model.update()
+
     @property
     def tFinal(self) -> float:
         """
@@ -307,7 +325,7 @@ class Model:
 
         self._model.set_model_param(model_name, param, value)
 
-    def set_input(self, signal: str, value: int, model: str):
+    def set_input(self, signal: str, value: float, model: str):
         """
         Set input signal to value
 
